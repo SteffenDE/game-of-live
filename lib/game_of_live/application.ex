@@ -13,9 +13,11 @@ defmodule GameOfLive.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: GameOfLive.PubSub},
       # Start the Endpoint (http/https)
-      GameOfLiveWeb.Endpoint
+      GameOfLiveWeb.Endpoint,
       # Start a worker by calling: GameOfLive.Worker.start_link(arg)
       # {GameOfLive.Worker, arg}
+      {DynamicSupervisor, strategy: :one_for_one, name: GameOfLive.GameSupervisor},
+      {Registry, keys: :unique, name: GameOfLive.GameRegistry}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

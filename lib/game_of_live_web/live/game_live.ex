@@ -11,24 +11,52 @@ defmodule GameOfLiveWeb.GameLive do
        grid: MapSet.new(),
        size: {100, 100},
        run: false,
-       show_grid: ""
+       show_grid: "",
+       count: 0
      )}
   end
 
   @impl true
-  def handle_event("toggle", _, socket = %{assigns: %{run: run, tick: tick}}) do
-    unless run do
-      Process.send_after(self(), :update, tick)
-    end
+  def handle_params(%{"name" => name}, _uri, socket) do
+    case Registry.lookup(GameOfLive.GameRegistry, name) do
+      [] ->
+        {
+          :noreply,
+          socket
+          |> put_flash(:error, "Game not found")
+          |> push_patch(to: Routes.game_path(socket, :index))
+        }
 
-    {:noreply, assign(socket, :run, not run)}
+      [{server, _pid}] ->
+        Phoenix.PubSub.subscribe(GameOfLive.PubSub, "game:#{name}")
+        GameOfLive.GameServer.subscribe(server)
+        {:ok, assigns} = GameOfLive.GameServer.get_state(server)
+        {:noreply, socket |> assign(server: server, name: name) |> assign(assigns)}
+    end
+  end
+
+  def handle_params(_params, _uri, socket) do
+    if connected?(socket) do
+      name = Nanoid.generate()
+      {:ok, _pid} = GameOfLive.GameServer.start_server(%{name: name})
+
+      {:noreply, push_patch(socket, to: Routes.game_path(socket, :game, name))}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
+  def handle_event("toggle", _, socket = %{assigns: %{server: server}}) do
+    GameOfLive.GameServer.toggle(server)
+
+    {:noreply, socket}
+  end
+
   def handle_event(
         "click",
         _params = %{"offset_x" => x, "offset_y" => y},
-        socket = %{assigns: %{grid: grid}}
+        socket = %{assigns: %{server: server, grid: grid}}
       ) do
     coords = {div(x, 10), div(y, 10)}
 
@@ -37,89 +65,47 @@ defmodule GameOfLiveWeb.GameLive do
         do: MapSet.delete(grid, coords),
         else: MapSet.put(grid, coords)
 
-    {:noreply, assign(socket, :grid, grid)}
+    GameOfLive.GameServer.set_grid(server, grid)
+
+    {:noreply, socket}
   end
 
-  @impl true
-  def handle_event("save_tick", %{"tick" => tick}, socket) do
-    {:noreply, assign(socket, :tick, String.to_integer(tick))}
+  def handle_event("save_tick", %{"tick" => tick}, socket = %{assigns: %{server: server}}) do
+    GameOfLive.GameServer.set_tick(server, String.to_integer(tick))
+
+    {:noreply, socket}
   end
 
-  @impl true
   def handle_event("dump", _, socket = %{assigns: %{grid: grid}}) do
     {:noreply,
      assign(socket, :show_grid, Enum.map(grid, fn {x, y} -> [x, y] end) |> Jason.encode!())}
   end
 
-  @impl true
-  def handle_event("load", %{"json" => grid_json}, socket) do
+  def handle_event("load", %{"json" => grid_json}, socket = %{assigns: %{server: server}}) do
     case Jason.decode(grid_json) do
       {:ok, points} when is_list(points) ->
-        {:noreply, assign(socket, :grid, MapSet.new(Enum.map(points, fn [x, y] -> {x, y} end)))}
+        GameOfLive.GameServer.set_grid(
+          server,
+          MapSet.new(Enum.map(points, fn [x, y] -> {x, y} end))
+        )
+
+        {:noreply, socket}
 
       _ ->
         {:noreply, socket}
     end
   end
 
-  defp get_ranges(grid) do
-    Enum.map(grid, fn {x, y} ->
-      for i <- (x - 1)..(x + 1),
-          j <- (y - 1)..(y + 1),
-          i > 0 and i <= 100,
-          j > 0 and j < 100,
-          do: {i, j}
-    end)
-    |> List.flatten()
-  end
-
-  defp count_neighbors(grid, x, y) do
-    for i <- (x - 1)..(x + 1), j <- (y - 1)..(y + 1), reduce: 0 do
-      acc ->
-        if i == x and j == y do
-          acc
-        else
-          acc +
-            if MapSet.member?(grid, {i, j}) do
-              1
-            else
-              0
-            end
-        end
-    end
-  end
-
   @impl true
-  def handle_info(:update, socket = %{assigns: %{run: false}}), do: {:noreply, socket}
-
-  @impl true
-  def handle_info(:update, socket = %{assigns: %{grid: grid, tick: tick}}) do
-    grid =
-      for {x, y} <- get_ranges(grid), reduce: grid do
-        acc ->
-          neighbors = count_neighbors(grid, x, y)
-
-          cond do
-            # starvation
-            neighbors < 2 -> MapSet.delete(acc, {x, y})
-            # overpopulation
-            neighbors > 3 -> MapSet.delete(acc, {x, y})
-            # magic birth
-            neighbors == 3 -> MapSet.put(acc, {x, y})
-            # default
-            true -> acc
-          end
-      end
-
-    Process.send_after(self(), :update, tick)
-
-    {:noreply, assign(socket, :grid, grid)}
-  end
+  def handle_info({:run, run}, socket), do: {:noreply, assign(socket, :run, run)}
+  def handle_info({:grid, grid}, socket), do: {:noreply, assign(socket, :grid, grid)}
+  def handle_info({:tick, tick}, socket), do: {:noreply, assign(socket, :tick, tick)}
+  def handle_info({:count, count}, socket), do: {:noreply, assign(socket, :count, count)}
 
   @impl true
   def render(assigns) do
     ~H"""
-    <h1>Game of Live(View)</h1>
+    <h1>Game of Live(View) - <%= @count %> players</h1>
 
     <div>
       <button type="button" phx-click="toggle"><%= if @run, do: "Stop", else: "Start" %></button>
