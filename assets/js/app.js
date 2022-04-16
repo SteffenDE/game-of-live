@@ -80,8 +80,8 @@ Hooks.Draw = {
         this.el.addEventListener("mousemove", this.drawmove.bind(this));
         this.el.addEventListener("mouseup", this.drawend.bind(this));
         // touch events
-        this.el.addEventListener("touchstart", this.touchwrap(this.drawstart.bind(this)));
-        this.el.addEventListener("touchmove", this.touchwrap(this.drawmove.bind(this)));
+        this.el.addEventListener("touchstart", this.touchwrap(this.drawstart.bind(this)), { passive: true });
+        this.el.addEventListener("touchmove", this.touchwrap(this.drawmove.bind(this)), { passive: true });
         this.el.addEventListener("touchend", this.touchwrap(this.drawend.bind(this)));
     },
 };
