@@ -79,7 +79,8 @@ defmodule GameOfLive.GameServer do
     Phoenix.PubSub.broadcast!(GameOfLive.PubSub, "game:#{name}", {:count, count - 1})
 
     if monitor_pids == [] do
-      Process.send_after(self(), :check_idle, 5_000)
+      # allow idle servers for 5 minutes
+      Process.send_after(self(), :check_idle, :timer.minutes(5))
     end
 
     {:noreply, %{state | monitor: monitor_pids, count: count - 1}}
