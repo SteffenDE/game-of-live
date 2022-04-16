@@ -68,8 +68,6 @@ defmodule GameOfLive.GameServer do
   def handle_cast({:set_grid, grid}, state = %{name: name}) do
     Phoenix.PubSub.broadcast!(GameOfLive.PubSub, "game:#{name}", {:grid, grid})
 
-    IO.inspect(name, label: "the grid vs #{inspect(state)}")
-
     {:noreply, %{state | grid: grid}}
   end
 

@@ -12,27 +12,28 @@ defmodule GameOfLiveWeb.GameLive do
        size: {100, 100},
        run: false,
        show_grid: "",
-       count: 0
+       count: 0,
+       page_title: "New Game"
      )}
   end
 
   @impl true
   def handle_params(%{"name" => name}, _uri, socket) do
-    case Registry.lookup(GameOfLive.GameRegistry, name) do
+    server = case Registry.lookup(GameOfLive.GameRegistry, name) do
       [] ->
-        {
-          :noreply,
-          socket
-          |> put_flash(:error, "Game not found")
-          |> push_patch(to: Routes.game_path(socket, :index))
-        }
+        {:ok, pid} = GameOfLive.GameServer.start_server(%{name: name})
+        IO.inspect(pid, label: "new server")
+        pid
 
       [{server, _pid}] ->
-        Phoenix.PubSub.subscribe(GameOfLive.PubSub, "game:#{name}")
-        GameOfLive.GameServer.subscribe(server)
-        {:ok, assigns} = GameOfLive.GameServer.get_state(server)
-        {:noreply, socket |> assign(server: server, name: name) |> assign(assigns)}
+        IO.inspect(server, label: "existing server")
+        server
     end
+
+    Phoenix.PubSub.subscribe(GameOfLive.PubSub, "game:#{name}")
+    GameOfLive.GameServer.subscribe(server)
+    {:ok, assigns = %{count: count}} = GameOfLive.GameServer.get_state(server)
+    {:noreply, socket |> assign(server: server, name: name, page_title: page_title(count)) |> assign(assigns)}
   end
 
   def handle_params(_params, _uri, socket) do
@@ -100,12 +101,15 @@ defmodule GameOfLiveWeb.GameLive do
   def handle_info({:run, run}, socket), do: {:noreply, assign(socket, :run, run)}
   def handle_info({:grid, grid}, socket), do: {:noreply, assign(socket, :grid, grid)}
   def handle_info({:tick, tick}, socket), do: {:noreply, assign(socket, :tick, tick)}
-  def handle_info({:count, count}, socket), do: {:noreply, assign(socket, :count, count)}
+  def handle_info({:count, count}, socket), do: {:noreply, assign(socket, count: count, page_title: page_title(count))}
+
+  defp page_title(1), do: "1 player"
+  defp page_title(n), do: "#{n} players"
 
   @impl true
   def render(assigns) do
     ~H"""
-    <h1>Game of Live(View) - <%= @count %> players</h1>
+    <h1>Game of Live(View) - <%= @page_title %></h1>
 
     <div>
       <button type="button" phx-click="toggle"><%= if @run, do: "Stop", else: "Start" %></button>
@@ -119,19 +123,19 @@ defmodule GameOfLiveWeb.GameLive do
     </div>
 
     <svg viewBox="0 0 1000 1000" width="1000" height="1000" phx-click="click">
-    <defs>
-      <pattern id="tenthGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-        <path d="M 10 0 L 0 0 0 10" fill="none" stroke="silver" stroke-width="0.5"/>
-      </pattern>
-      <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
-        <rect width="100" height="100" fill="url(#tenthGrid)"/>
-        <path d="M 100 0 L 0 0 0 100" fill="none" stroke="gray" stroke-width="1"/>
-      </pattern>
-    </defs>
-    <rect width="100%" height="100%" fill="url(#grid)"/>
-    <%= for {x, y} <- @grid do %>
-      <rect x={x * 10} y={y * 10} width="10" height="10" style="fill:rgb(0,0,255)" />
-    <% end %>
+      <defs>
+        <pattern id="tenthGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+          <path d="M 10 0 L 0 0 0 10" fill="none" stroke="silver" stroke-width="0.5"/>
+        </pattern>
+        <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+          <rect width="100" height="100" fill="url(#tenthGrid)"/>
+          <path d="M 100 0 L 0 0 0 100" fill="none" stroke="gray" stroke-width="1"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)"/>
+      <%= for {x, y} <- @grid do %>
+        <rect x={x * 10} y={y * 10} width="10" height="10" style="fill:rgb(0,0,255)" />
+      <% end %>
     </svg>
 
     <form phx-submit="load">
