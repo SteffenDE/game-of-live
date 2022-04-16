@@ -1,16 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8"/>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <%= csrf_meta_tag() %>
-    <%= live_title_tag assigns[:page_title] || "GameOfLive", suffix: " · Game Of Live(View)" %>
-    <link phx-track-static rel="stylesheet" href={Routes.static_path(@conn, "/assets/app.css")}/>
-    <link phx-track-static rel="icon" type="image/webp" sizes="120x120" href={Routes.static_path(@conn, "/images/favicon-120x120.webp")}/>
-    <link phx-track-static rel="icon" type="image/png" sizes="120x120" href={Routes.static_path(@conn, "/images/favicon-120x120.png")}/>
-    <link phx-track-static rel="apple-touch-icon" sizes="180x180" href={Routes.static_path(@conn, "/images/apple-touch-icon.png")} />
-    <script defer phx-track-static type="text/javascript" src={Routes.static_path(@conn, "/assets/app.js")}></script>
+    <%= live_title_tag(assigns[:page_title] || "GameOfLive", suffix: " · Game Of Live(View)") %>
+    <link phx-track-static rel="stylesheet" href={Routes.static_path(@conn, "/assets/app.css")} />
+    <link
+      phx-track-static
+      rel="icon"
+      type="image/webp"
+      sizes="120x120"
+      href={Routes.static_path(@conn, "/images/favicon-120x120.webp")}
+    />
+    <link
+      phx-track-static
+      rel="icon"
+      type="image/png"
+      sizes="120x120"
+      href={Routes.static_path(@conn, "/images/favicon-120x120.png")}
+    />
+    <link
+      phx-track-static
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href={Routes.static_path(@conn, "/images/apple-touch-icon.png")}
+    />
+    <script
+      defer
+      phx-track-static
+      type="text/javascript"
+      src={Routes.static_path(@conn, "/assets/app.js")}
+    >
+    </script>
   </head>
   <body>
     <%= @inner_content %>
