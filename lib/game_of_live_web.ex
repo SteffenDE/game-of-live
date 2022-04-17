@@ -87,6 +87,9 @@ defmodule GameOfLiveWeb do
 
       import GameOfLiveWeb.ErrorHelpers
       alias GameOfLiveWeb.Router.Helpers, as: Routes
+
+      # own helpers
+      import GameOfLiveWeb.LiveHelpers
     end
   end
 

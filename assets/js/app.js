@@ -1,6 +1,5 @@
 // We import the CSS which is extracted to its own file by esbuild.
 // Remove this line if you add a your own CSS build pipeline (e.g postcss).
-import "../css/app.css"
 
 // If you want to use Phoenix channels, run `mix help phx.gen.channel`
 // to get started and then uncomment the line below.
@@ -96,8 +95,30 @@ let liveSocket = new LiveSocket("/live", Socket, {
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"});
-window.addEventListener("phx:page-loading-start", info => topbar.show());
-window.addEventListener("phx:page-loading-stop", info => topbar.hide());
+
+let topBarScheduled = undefined;
+window.addEventListener("phx:page-loading-start", () => {
+  if(!topBarScheduled) {
+    topBarScheduled = setTimeout(() => topbar.show(), 120);
+  };
+});
+window.addEventListener("phx:page-loading-stop", () => {
+  clearTimeout(topBarScheduled);
+  topBarScheduled = undefined;
+  topbar.hide();
+});
+// our own helpers
+window.addEventListener("gol:toggle-aria", (event) => {
+  const current = event.target.getAttribute("aria-expanded");
+  event.target.setAttribute("aria-expanded", current === "true" ? "false" : "true");
+});
+window.addEventListener("js:exec-timeout", (e) => {
+  if (e.detail.timeout) {
+    setTimeout(() => {
+      liveSocket.execJS(e.target, e.target.getAttribute(e.detail.js));
+    }, e.detail.timeout);
+  }
+});
 
 // connect if there are any LiveViews on the page
 liveSocket.connect();

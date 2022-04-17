@@ -1,13 +1,13 @@
 defmodule GameOfLiveWeb.GameLive do
   use GameOfLiveWeb, :live_view
 
-  @default_tick 100
-
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
-       tick: @default_tick,
+       navbar_right: &render_nav_right/1,
+       after_content: &render_bottom_bar/1,
+       tick: 100,
        grid: MapSet.new(),
        working_grid: MapSet.new(),
        size: {100, 100},
@@ -147,61 +147,193 @@ defmodule GameOfLiveWeb.GameLive do
   defp page_title(1), do: "1 player"
   defp page_title(n), do: "#{n} players"
 
+  defp render_bottom_bar(assigns) do
+    ~H"""
+    <nav class="bg-white dark:bg-zinc-900 border-t-2 dark:border-zinc-700 dark:text-zinc-200 absolute bottom-0 w-full">
+      <div class="mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div class="flex m-auto space-x-2">
+            <button
+              type="button"
+              title={if @run, do: "Pause Game", else: "Start Game"}
+              phx-click="toggle"
+              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <.icon name={if @run, do: :pause, else: :play} class="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              title="Clear Grid"
+              phx-click="clear"
+              disabled={MapSet.size(@working_grid) == 0 && MapSet.size(@grid) == 0}
+              class="disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            >
+              <.icon name={:x} class="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              title="Apply Changes"
+              phx-click="apply_work"
+              disabled={MapSet.size(@working_grid) == 0}
+              class={
+                "disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 #{}"
+              }
+            >
+              <.icon name={:check} class="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              title={"Change mode to: #{if @mode == :draw, do: "Erase", else: "Draw"}"}
+              phx-click="toggle_mode"
+              class={
+                "inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 #{}"
+              }
+            >
+              <.icon name={if @mode == :draw, do: :trash, else: :pencil} class="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              title="Game Settings"
+              phx-click={show_modal("settings")}
+              class={
+                "inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 #{}"
+              }
+            >
+              <.icon name={:cog} class="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              title="Information"
+              phx-click={show_modal("info")}
+              class={
+                "inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 #{}"
+              }
+            >
+              <.icon name={:information_circle} class="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+    """
+  end
+
+  defp render_nav_right(assigns) do
+    ~H"""
+    <.icon name={if @count > 1, do: :users, else: :user} outlined />
+    <span class="ml-2 text-zinc-800 dark:text-zinc-200"><%= page_title(@count) %></span>
+    """
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
-    <h1>Game of Live(View) - <%= @page_title %></h1>
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <!-- Main content -->
+      <div class="flex-1 flex items-stretch overflow-hidden">
+        <main class="flex-1 overflow-y-auto p-4">
+          <!-- Primary column -->
+          <section
+            aria-labelledby="primary-heading"
+            class="min-w-0 flex-1 h-full flex flex-col lg:order-last"
+          >
+            <svg
+              id="game"
+              viewBox="0 0 1000 1000"
+              width="1000"
+              height="1000"
+              class="bg-white dark:bg-zinc-900 shadow mx-auto w-full h-auto max-w-[calc(100vh-theme(space.40))] max-h-[calc(100vh-theme(space.40))] touch-pinch-zoom"
+              phx-hook="Draw"
+            >
+              <!-- https://stackoverflow.com/questions/22013281/drawing-a-grid-using-svg-markup -->
+              <defs>
+                <pattern id="tenthGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="silver" stroke-width="0.5" />
+                </pattern>
+                <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+                  <rect width="100" height="100" fill="url(#tenthGrid)" />
+                  <path d="M 100 0 L 0 0 0 100" fill="none" stroke="gray" stroke-width="1" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid)" />
+              <%= for {x, y} <- @grid do %>
+                <rect
+                  x={x * 10}
+                  y={y * 10}
+                  width="10"
+                  height="10"
+                  fill="currentColor"
+                  class="text-primary-600 dark:text-primary-500"
+                />
+              <% end %>
+              <%= for {x, y} <- @working_grid do %>
+                <rect
+                  x={x * 10}
+                  y={y * 10}
+                  width="10"
+                  height="10"
+                  fill="currentColor"
+                  class="text-green-600 dark:text-green-500"
+                />
+              <% end %>
+            </svg>
+          </section>
+        </main>
+        <div class="hidden">
+          <!-- Secondary column (hidden on smaller screens) -->
+          <aside
+            id="player-bar"
+            class="hidden w-80 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-700 overflow-y-auto xl:block dark:text-zinc-100"
+          >
+            Cool
+          </aside>
+          <.slideover id="players" class="xl:hidden">
+            Cool
+          </.slideover>
+        </div>
+      </div>
+      <.modal id="settings" no_border>
+        <.card>
+          <:title>Settings</:title>
+          <h3 class="text-md mb-2">Load or Dump the Game Grid</h3>
+          <form phx-submit="load" class="my-4">
+            <textarea
+              name="json"
+              rows="5"
+              class="max-w-lg shadow-sm block w-full focus:ring-primary-500 focus:border-primary-500 sm:text-sm border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 rounded-md text-zinc-800 dark:text-zinc-200"
+            ><%= @show_grid %></textarea>
+            <div class="mt-4">
+              <.button type="submit" phx-click={hide_modal("settings")}>Load grid</.button>
+              <.button type="button" phx-click="dump">Dump grid</.button>
+            </div>
+          </form>
+          <hr class="my-4">
+          <h3 class="text-md mb-2">Tick Speed</h3>
+          <form phx-change="save_tick">
+            <!--<input type="text" inputmode="numeric" pattern="[0-9]*" name="tick" value={@tick}>-->
+            <input type="range" min="10" max="1000" value={@tick} name="tick" />
+            <span><%= @tick %></span>
+          </form>
+        </.card>
+      </.modal>
+      <.modal id="info" no_border>
+        <.card>
+          <:title>Information</:title>
 
-    <div>
-      <button type="button" phx-click="toggle"><%= if @run, do: "Stop", else: "Start" %></button>
-      <button type="button" phx-click="clear">Clear grid</button>
-      <button type="button" phx-click="apply_work" disabled={MapSet.size(@working_grid) == 0}>
-        Apply changes
-      </button>
-      <button type="button" phx-click="toggle_mode">
-        Mode: <%= if @mode == :draw, do: "Draw", else: "Erase" %>
-      </button>
+          <p class="mb-4">This game implements <a class="underline" href="https://en.wikipedia.org/wiki/Conway's_Game_of_Life">Conway's Game of Life</a>
+          using <a class="underline" href="https://www.phoenixframework.org/">Phoenix LiveView</a>.</p>
 
-      <form phx-change="save_tick">
-        <!--<input type="text" inputmode="numeric" pattern="[0-9]*" name="tick" value={@tick}>-->
-        <input type="range" min="10" max="1000" value={@tick} name="tick" />
-        <span><%= @tick %></span>
-      </form>
+          <p class="mb-4">The game is played on a grid of cells. In each game step:</p>
+
+          <ol class="list-decimal list-inside">
+              <li>Any live cell with fewer than two live neighbours dies, as if by underpopulation.</li>
+              <li>Any live cell with two or three live neighbours lives on to the next generation.</li>
+              <li>Any live cell with more than three live neighbours dies, as if by overpopulation.</li>
+              <li>Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.</li>
+          </ol>
+        </.card>
+      </.modal>
     </div>
-
-    <svg
-      id="game"
-      viewBox="0 0 1000 1000"
-      width="1000"
-      height="1000"
-      style="width: 100%; height: 100%; touch-action: pinch-zoom;"
-      phx-hook="Draw"
-    >
-      <defs>
-        <pattern id="tenthGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-          <path d="M 10 0 L 0 0 0 10" fill="none" stroke="silver" stroke-width="0.5" />
-        </pattern>
-        <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
-          <rect width="100" height="100" fill="url(#tenthGrid)" />
-          <path d="M 100 0 L 0 0 0 100" fill="none" stroke="gray" stroke-width="1" />
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#grid)" />
-      <%= for {x, y} <- @grid do %>
-        <rect x={x * 10} y={y * 10} width="10" height="10" style="fill:rgb(0,0,255)" />
-      <% end %>
-      <%= for {x, y} <- @working_grid do %>
-        <rect x={x * 10} y={y * 10} width="10" height="10" style="fill:rgb(0,255,0)" />
-      <% end %>
-    </svg>
-
-    <hr />
-
-    <form phx-submit="load">
-      <textarea name="json"><%= @show_grid %></textarea>
-      <button type="submit">Load grid</button>
-      <button type="button" phx-click="dump">Dump grid</button>
-    </form>
     """
   end
 end
