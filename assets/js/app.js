@@ -85,6 +85,63 @@ Hooks.Draw = {
     },
 };
 
+// https://stackoverflow.com/questions/400212/how-do-i-copy-to-the-clipboard-in-javascript
+const copyHelper = {
+    fallbackCopyTextToClipboard(text) {
+        var textArea = document.createElement("textarea");
+        textArea.value = text;
+        
+        // Avoid scrolling to bottom
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.position = "fixed";
+        textArea.style.display = "none";
+
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+      
+        try {
+            if (document.execCommand("copy")) {
+                this.handleSuccess();
+            } else {
+                this.handleError();
+            }
+        } catch (err) {
+            console.error("legacy copy error", err);
+            this.handleError();
+        }
+      
+        document.body.removeChild(textArea);
+    },
+    copyTextToClipboard(text) {
+        if (!navigator.clipboard) {
+            fallbackCopyTextToClipboard(text);
+            return;
+        }
+        navigator.clipboard.writeText(text).then(() => {
+            this.handleSuccess();
+        }, function(err) {
+            console.error("clipboard api error", err);
+            fallbackCopyTextToClipboard(text);
+        });
+    },
+    handleSuccess() {
+        if (!this.el) return; 
+        const js = this.el.getAttribute("data-copy-success");
+        if (js) {
+            this.liveSocket.execJS(this.el, js);
+        }
+    },
+    handleError() {
+        if (!this.el) return; 
+        const js = this.el.getAttribute("data-copy-error");
+        if (js) {
+            this.liveSocket.execJS(this.el, js);
+        }
+    },
+};
+
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content");
 let liveSocket = new LiveSocket("/live", Socket, {
     params: {
@@ -118,6 +175,32 @@ window.addEventListener("js:exec-timeout", (e) => {
       liveSocket.execJS(e.target, e.target.getAttribute(e.detail.js));
     }, e.detail.timeout);
   }
+});
+window.addEventListener("phx:copy", (e) => {
+    const that = { liveSocket, ...e.detail, ...copyHelper };
+    if (e.detail.el) {
+        // this should be the element that was clicked,
+        // set it to this inside the copyHelper
+        that.el = document.querySelector(e.detail.el);
+    }
+    if (e.target !== window && !e.detail.to) {
+        // we got a target from the client, e.g.
+        // JS.dispatch("phx:copy", { to: "#my-target" });
+        e.detail.to = e.target;
+    } else if (e.detail.to) {
+        // we got a target from the server, e.g.
+        // push_event("copy", %{"to" => "#my-target"});
+        e.detail.to = document.querySelector(e.detail.to);
+    }
+    // either copy text directly from detail, or use innerText from
+    // the target element 
+    if (e.detail.text) {
+        copyHelper.copyTextToClipboard.bind(that)(e.detail.text);
+    } else if (e.detail.to) {
+        copyHelper.copyTextToClipboard.bind(that)(e.detail.to.innerHTML);
+    } else {
+        console.error("invalid use of copy event! expected detail.text or detail.to");
+    }
 });
 
 // connect if there are any LiveViews on the page

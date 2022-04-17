@@ -19,6 +19,8 @@ defmodule GameOfLiveWeb.Router do
 
     live "/", GameLive, :index
     live "/game/:name", GameLive, :game
+
+    get "/s", ShareController, :index
   end
 
   # Other scopes may use custom stacks.

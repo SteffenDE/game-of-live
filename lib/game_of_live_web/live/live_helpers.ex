@@ -21,6 +21,62 @@ defmodule GameOfLiveWeb.LiveHelpers do
     """
   end
 
+  def flash(assigns = %{kind: :info}) do
+    ~H"""
+    <%= if live_flash(@flash, @kind) do %>
+      <div class="rounded-md bg-blue-50 p-4" phx-click={JS.push("lv:clear-flash")}>
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <.icon name={:information_circle} class="h-5 w-5 text-blue-400" />
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-blue-700"><%= live_flash(@flash, :info) %></p>
+          </div>
+          <div class="ml-auto pl-3">
+            <div class="-mx-1.5 -my-1.5">
+              <button
+                type="button"
+                class="inline-flex bg-blue-50 rounded-md p-1.5 text-blue-500 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-blue-50 focus:ring-blue-600"
+              >
+                <span class="sr-only">Dismiss</span>
+                <.icon name={:x} class="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+    """
+  end
+
+  def flash(assigns = %{kind: :error}) do
+    ~H"""
+    <%= if live_flash(@flash, @kind) do %>
+      <div class="rounded-md bg-red-50 p-4" phx-click={JS.push("lv:clear-flash")}>
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <.icon name={:information_circle} class="h-5 w-5 text-red-400" />
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-700"><%= live_flash(@flash, :error) %></p>
+          </div>
+          <div class="ml-auto pl-3">
+            <div class="-mx-1.5 -my-1.5">
+              <button
+                type="button"
+                class="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
+              >
+                <span class="sr-only">Dismiss</span>
+                <.icon name={:x} class="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+    """
+  end
+
   def button(assigns) do
     assigns =
       assigns
@@ -38,6 +94,22 @@ defmodule GameOfLiveWeb.LiveHelpers do
     >
       <%= render_slot(@inner_block) %>
     </button>
+    """
+  end
+
+  def textarea(assigns) do
+    assigns =
+      assigns
+      |> assign_new(:class, fn -> "" end)
+      |> assign(:extra_assigns, assigns_to_attributes(assigns, [:class]))
+
+    ~H"""
+    <textarea
+      class={
+        "max-w-lg shadow-sm block w-full focus:ring-primary-500 focus:border-primary-500 sm:text-sm border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 rounded-md text-zinc-800 dark:text-zinc-200 #{@class}"
+      }
+      {@extra_assigns}
+    ><%= render_slot(@inner_block) %></textarea>
     """
   end
 
@@ -61,7 +133,9 @@ defmodule GameOfLiveWeb.LiveHelpers do
                   src={Routes.static_path(GameOfLiveWeb.Endpoint, "/images/favicon-120x120.png")}
                   alt="Game of Live"
                 />
-                <span class="ml-4 text-2xl">Game of Live<span class="text-zinc-400">View</span></span>
+                <span class="ml-4 text-2xl">
+                  Game of Live<span class="text-zinc-400">View</span>
+                </span>
               </div>
             </div>
             <div class="hidden w-full sm:flex sm:mx-auto sm:space-x-8">
@@ -231,7 +305,9 @@ defmodule GameOfLiveWeb.LiveHelpers do
         </span>
         <div
           id={"#{@id}-content"}
-          class={"hidden relative align-bottom bg-zinc-100 dark:bg-zinc-800 rounded-lg #{unless @no_border, do: "px-4 pt-5 pb-4 sm:p-6"} text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full"}
+          class={
+            "hidden relative align-bottom bg-zinc-100 dark:bg-zinc-800 rounded-lg #{unless @no_border, do: "px-4 pt-5 pb-4 sm:p-6"} text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full"
+          }
           phx-click-away={hide_modal(@on_close, @id)}
           phx-window-keydown={hide_modal(@on_close, @id)}
           phx-target={assigns[:"phx-target"]}
