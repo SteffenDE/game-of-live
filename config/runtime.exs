@@ -25,6 +25,7 @@ if config_env() == :prod do
     server: true,
     http: [:inet6, port: String.to_integer(System.get_env("PORT") || "4000")],
     url: [
+      scheme: System.get_env("PUBLIC_SCHEME") || "http",
       host:
         if(app_name, do: "#{app_name}.fly.dev", else: System.get_env("PUBLIC_HOST") || "localhost"),
       port: String.to_integer(System.get_env("PUBLIC_PORT") || "80")

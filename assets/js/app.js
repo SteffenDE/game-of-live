@@ -116,14 +116,14 @@ const copyHelper = {
     },
     copyTextToClipboard(text) {
         if (!navigator.clipboard) {
-            fallbackCopyTextToClipboard(text);
+            this.fallbackCopyTextToClipboard(text);
             return;
         }
         navigator.clipboard.writeText(text).then(() => {
             this.handleSuccess();
-        }, function(err) {
+        }, (err) => {
             console.error("clipboard api error", err);
-            fallbackCopyTextToClipboard(text);
+            this.fallbackCopyTextToClipboard(text);
         });
     },
     handleSuccess() {
@@ -190,14 +190,18 @@ window.addEventListener("phx:copy", (e) => {
     } else if (e.detail.to) {
         // we got a target from the server, e.g.
         // push_event("copy", %{"to" => "#my-target"});
+        // NOTE: currently not supported in Safari...
         e.detail.to = document.querySelector(e.detail.to);
     }
+    console.log(e.detail);
     // either copy text directly from detail, or use innerText from
-    // the target element 
+    // the target element
     if (e.detail.text) {
         copyHelper.copyTextToClipboard.bind(that)(e.detail.text);
     } else if (e.detail.to) {
-        copyHelper.copyTextToClipboard.bind(that)(e.detail.to.innerHTML);
+        const el = e.detail.to;
+        const text = el.innerText || el.innerHTML || el.value;
+        copyHelper.copyTextToClipboard.bind(that)(text);
     } else {
         console.error("invalid use of copy event! expected detail.text or detail.to");
     }

@@ -7,6 +7,7 @@ defmodule GameOfLiveWeb.GameLive do
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
+       name: "",
        navbar_right: &render_nav_right/1,
        after_content: &render_bottom_bar/1,
        tick: 100,
@@ -119,12 +120,11 @@ defmodule GameOfLiveWeb.GameLive do
     end
   end
 
-  def handle_event("dump", %{"copy-el" => el}, socket = %{assigns: %{grid: grid}}) do
+  def handle_event("dump", _params, socket = %{assigns: %{grid: grid}}) do
     grid_json = Enum.map(grid, fn {x, y} -> [x, y] end) |> Jason.encode!()
 
     socket
     |> assign(:show_grid, grid_json)
-    |> push_event("copy", %{"text" => grid_json, "el" => el})
     |> then(&{:noreply, &1})
   end
 
@@ -143,12 +143,11 @@ defmodule GameOfLiveWeb.GameLive do
     end
   end
 
-  def handle_event("share_link", %{"copy-el" => el}, socket = %{assigns: %{grid: grid}}) do
+  def handle_event("share_link", _params, socket = %{assigns: %{grid: grid}}) do
     url = share_url(grid)
 
     socket
     |> assign(:share_url, url)
-    |> push_event("copy", %{"text" => url, "el" => el})
     |> then(&{:noreply, &1})
   end
 
@@ -179,7 +178,7 @@ defmodule GameOfLiveWeb.GameLive do
               type="button"
               title={if @run, do: "Pause Game", else: "Start Game"}
               phx-click="toggle"
-              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
             >
               <.icon name={if @run, do: :pause, else: :play} class="h-5 w-5" />
             </button>
@@ -188,7 +187,7 @@ defmodule GameOfLiveWeb.GameLive do
               title="Clear Grid"
               phx-click="clear"
               disabled={MapSet.size(@working_grid) == 0 && MapSet.size(@grid) == 0}
-              class="disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              class="disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
             >
               <.icon name={:x} class="h-5 w-5" />
             </button>
@@ -197,9 +196,7 @@ defmodule GameOfLiveWeb.GameLive do
               title="Apply Changes"
               phx-click="apply_work"
               disabled={MapSet.size(@working_grid) == 0}
-              class={
-                "disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 #{}"
-              }
+              class="disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
             >
               <.icon name={:check} class="h-5 w-5" />
             </button>
@@ -207,9 +204,7 @@ defmodule GameOfLiveWeb.GameLive do
               type="button"
               title={"Change mode to: #{if @mode == :draw, do: "Erase", else: "Draw"}"}
               phx-click="toggle_mode"
-              class={
-                "inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 #{}"
-              }
+              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
             >
               <.icon name={if @mode == :draw, do: :trash, else: :pencil} class="h-5 w-5" />
             </button>
@@ -217,9 +212,7 @@ defmodule GameOfLiveWeb.GameLive do
               type="button"
               title="Share"
               phx-click={show_modal("share")}
-              class={
-                "inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 #{}"
-              }
+              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
             >
               <.icon name={:share} class="h-5 w-5" />
             </button>
@@ -227,9 +220,7 @@ defmodule GameOfLiveWeb.GameLive do
               type="button"
               title="Game Settings"
               phx-click={show_modal("settings")}
-              class={
-                "inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 #{}"
-              }
+              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
             >
               <.icon name={:cog} class="h-5 w-5" />
             </button>
@@ -237,9 +228,7 @@ defmodule GameOfLiveWeb.GameLive do
               type="button"
               title="Information"
               phx-click={show_modal("info")}
-              class={
-                "inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 #{}"
-              }
+              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
             >
               <.icon name={:information_circle} class="h-5 w-5" />
             </button>
@@ -337,16 +326,26 @@ defmodule GameOfLiveWeb.GameLive do
           <:title>Settings</:title>
           <h3 class="text-md mb-2">Load or Dump the Game Grid</h3>
           <form phx-submit="load" class="my-4">
-            <.textarea name="json" rows="5"><%= @show_grid %></.textarea>
+            <div class="flex items-end">
+              <.textarea id="dump-area" name="json" rows="5"><%= @show_grid %></.textarea>
+              <.button
+                id="copy-dump-btn"
+                class="ml-2 transition ease-out-300 flex-0"
+                phx-click={
+                  JS.dispatch("phx:copy", to: "#dump-area", detail: %{"el" => "#copy-dump-btn"})
+                }
+                data-copy-success={success_btn("#copy-dump-btn")}
+                data-copy-error={error_btn("#copy-dump-btn")}
+              >
+                Copy
+              </.button>
+            </div>
             <div class="mt-4">
               <.button type="submit" phx-click={hide_modal("settings")}>Load grid</.button>
               <.button
                 id="dump-btn"
                 type="button"
-                class="transition ease-out-300"
-                phx-click={JS.push("dump", value: %{"copy-el" => "#dump-btn"})}
-                data-copy-success={success_btn("#dump-btn")}
-                data-copy-error={error_btn("#dump-btn")}
+                phx-click="dump"
               >
                 Dump grid
               </.button>
@@ -370,20 +369,27 @@ defmodule GameOfLiveWeb.GameLive do
 
           <.button
             id="share-url-btn"
-            class="transition ease-out-300"
-            phx-click={JS.push("share_link", value: %{"copy-el" => "#share-url-btn"})}
-            data-copy-success={success_btn("#share-url-btn")}
-            data-copy-error={error_btn("#share-url-btn")}
+            class="mb-4"
+            phx-click="share_link"
           >
             Generate Link
           </.button>
 
-          <p class="my-4">
-            If your browser supports it, the link is automatically copied to your clipboard.
-          </p>
-
           <%= if @share_url do %>
-            <.textarea><%= @share_url %></.textarea>
+            <div class="flex items-end mb-4">
+              <.textarea id="share-url" rows="5"><%= @share_url %></.textarea>
+              <.button
+                id="copy-share-url-btn"
+                class="ml-2 transition ease-out-300"
+                phx-click={
+                  JS.dispatch("phx:copy", to: "#share-url", detail: %{"el" => "#copy-share-url-btn"})
+                }
+                data-copy-success={success_btn("#copy-share-url-btn")}
+                data-copy-error={error_btn("#copy-share-url-btn")}
+              >
+                Copy
+              </.button>
+            </div>
           <% end %>
 
           <hr />
@@ -392,8 +398,8 @@ defmodule GameOfLiveWeb.GameLive do
             If you want others to join the current game session, just send them the current URL.
           </p>
 
-          <div class="flex">
-            <.textarea id="current-url" rows="1"><%= Routes.game_url(@socket, :game, @name) %></.textarea>
+          <div class="flex items-end">
+            <.textarea id="current-url" rows="2"><%= Routes.game_url(@socket, :game, @name) %></.textarea>
             <.button
               id="copy-current-url-btn"
               class="ml-2 transition ease-out-300"
