@@ -48,8 +48,8 @@ config :game_of_live, GameOfLiveWeb.Endpoint,
   live_reload: [
     patterns: [
       ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"lib/game_of_live_web/(live|views)/.*(ex)$",
-      ~r"lib/game_of_live_web/templates/.*(eex)$"
+      ~r"priv/gettext/.*(po)$",
+      ~r"lib/game_of_live_web/(controllers|live|components)/.*(ex|heex)$"
     ]
   ]
 

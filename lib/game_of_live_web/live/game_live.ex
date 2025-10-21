@@ -46,7 +46,7 @@ defmodule GameOfLiveWeb.GameLive do
       name = Nanoid.generate()
       {:ok, _pid} = GameOfLive.GameServer.start_server(%{name: name})
 
-      {:noreply, push_patch(socket, to: Routes.game_path(socket, :game, name))}
+      {:noreply, push_patch(socket, to: ~p"/game/#{name}")}
     else
       {:noreply, socket}
     end

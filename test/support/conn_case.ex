@@ -24,10 +24,11 @@ defmodule GameOfLiveWeb.ConnCase do
       import Phoenix.ConnTest
       import GameOfLiveWeb.ConnCase
 
-      alias GameOfLiveWeb.Router.Helpers, as: Routes
-
       # The default endpoint for testing
       @endpoint GameOfLiveWeb.Endpoint
+
+      # Use verified routes
+      use GameOfLiveWeb, :verified_routes
     end
   end
 

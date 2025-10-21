@@ -20,7 +20,7 @@ defmodule GameOfLiveWeb.Endpoint do
     at: "/",
     from: :game_of_live,
     gzip: false,
-    only: ~w(assets fonts images favicon.ico robots.txt)
+    only: GameOfLiveWeb.static_paths()
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.

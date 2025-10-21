@@ -10,7 +10,10 @@ import Config
 # Configures the endpoint
 config :game_of_live, GameOfLiveWeb.Endpoint,
   url: [host: "localhost"],
-  render_errors: [view: GameOfLiveWeb.ErrorView, accepts: ~w(html json), layout: false],
+  render_errors: [
+    formats: [html: GameOfLiveWeb.ErrorHTML, json: GameOfLiveWeb.ErrorJSON],
+    layout: false
+  ],
   pubsub_server: GameOfLive.PubSub,
   live_view: [signing_salt: "NsO4hwk7"]
 
