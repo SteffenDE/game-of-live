@@ -1,15 +1,11 @@
 defmodule GameOfLiveWeb.GameLive do
   use GameOfLiveWeb, :live_view
 
-  alias Phoenix.LiveView.JS
-
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
        name: "",
-       navbar_right: &render_nav_right/1,
-       after_content: &render_bottom_bar/1,
        tick: 100,
        grid: MapSet.new(),
        working_grid: MapSet.new(),
@@ -50,7 +46,7 @@ defmodule GameOfLiveWeb.GameLive do
       name = Nanoid.generate()
       {:ok, _pid} = GameOfLive.GameServer.start_server(%{name: name})
 
-      {:noreply, push_patch(socket, to: Routes.game_path(socket, :game, name))}
+      {:noreply, push_patch(socket, to: ~p"/game/#{name}")}
     else
       {:noreply, socket}
     end
@@ -165,85 +161,7 @@ defmodule GameOfLiveWeb.GameLive do
   defp share_url(grid) do
     board_json = Enum.map(grid, fn {x, y} -> [x, y] end) |> Jason.encode!()
 
-    Routes.share_url(GameOfLiveWeb.Endpoint, :index, %{"board" => board_json})
-  end
-
-  defp render_bottom_bar(assigns) do
-    ~H"""
-    <nav class="bg-white dark:bg-zinc-900 border-t-2 dark:border-zinc-700 dark:text-zinc-200 absolute bottom-0 w-full">
-      <div class="mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex m-auto space-x-2">
-            <button
-              type="button"
-              title={if @run, do: "Pause Game", else: "Start Game"}
-              phx-click="toggle"
-              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
-            >
-              <.icon name={if @run, do: :pause, else: :play} class="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              title="Clear Grid"
-              phx-click="clear"
-              disabled={MapSet.size(@working_grid) == 0 && MapSet.size(@grid) == 0}
-              class="disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
-            >
-              <.icon name={:x} class="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              title="Apply Changes"
-              phx-click="apply_work"
-              disabled={MapSet.size(@working_grid) == 0}
-              class="disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
-            >
-              <.icon name={:check} class="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              title={"Change mode to: #{if @mode == :draw, do: "Erase", else: "Draw"}"}
-              phx-click="toggle_mode"
-              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
-            >
-              <.icon name={if @mode == :draw, do: :trash, else: :pencil} class="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              title="Share"
-              phx-click={show_modal("share")}
-              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
-            >
-              <.icon name={:share} class="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              title="Game Settings"
-              phx-click={show_modal("settings")}
-              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
-            >
-              <.icon name={:cog} class="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              title="Information"
-              phx-click={show_modal("info")}
-              class="inline-flex items-center p-1.5 border border-transparent rounded-full shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-zinc-700"
-            >
-              <.icon name={:information_circle} class="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </nav>
-    """
-  end
-
-  defp render_nav_right(assigns) do
-    ~H"""
-    <.icon name={if @count > 1, do: :users, else: :user} outlined />
-    <span class="ml-2 text-zinc-800 dark:text-zinc-200"><%= page_title(@count) %></span>
-    """
+    url(~p"/s?#{%{"board" => board_json}}")
   end
 
   defp success_btn(to) do
@@ -254,39 +172,41 @@ defmodule GameOfLiveWeb.GameLive do
     JS.transition("bg-red-500 hover:bg-red-500", time: 1000, to: to)
   end
 
+
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <!-- Main content -->
-      <div class="flex-1 flex items-stretch overflow-hidden">
-        <main class="flex-1 overflow-y-auto p-4">
-          <!-- Primary column -->
-          <section
-            aria-labelledby="primary-heading"
-            class="min-w-0 flex-1 h-full flex flex-col lg:order-last"
-          >
-            <svg
-              id="game"
-              viewBox="0 0 1000 1000"
-              width="1000"
-              height="1000"
-              class="bg-white dark:bg-zinc-900 shadow mx-auto w-full h-auto max-w-[calc(100vh-theme(space.40))] max-h-[calc(100vh-theme(space.40))] touch-pinch-zoom"
-              phx-hook="Draw"
-            >
-              <!-- https://stackoverflow.com/questions/22013281/drawing-a-grid-using-svg-markup -->
-              <defs>
-                <pattern id="tenthGrid" width="10" height="10" patternUnits="userSpaceOnUse">
-                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="silver" stroke-width="0.5" />
-                </pattern>
-                <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
-                  <rect width="100" height="100" fill="url(#tenthGrid)" />
-                  <path d="M 100 0 L 0 0 0 100" fill="none" stroke="gray" stroke-width="1" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
-              <%= for {x, y} <- @grid do %>
+    <Layouts.app flash={@flash}>
+      <:navbar_right>
+        <.icon name={if @count > 1, do: "hero-users", else: "hero-user"} class="size-6" />
+        <span class="ml-2 text-zinc-800 dark:text-zinc-200">{page_title(@count)}</span>
+      </:navbar_right>
+
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 flex items-stretch overflow-hidden">
+          <div class="flex-1 overflow-y-auto p-4">
+            <section class="min-w-0 flex-1 h-full flex flex-col lg:order-last">
+              <svg
+                id="game"
+                viewBox="0 0 1000 1000"
+                width="1000"
+                height="1000"
+                class="bg-white dark:bg-zinc-900 shadow-sm mx-auto w-full h-auto max-w-[calc(100vh-10rem)] max-h-[calc(100vh-10rem)] touch-pinch-zoom"
+                phx-hook=".Draw"
+              >
+                <%!-- https://stackoverflow.com/questions/22013281/drawing-a-grid-using-svg-markup --%>
+                <defs>
+                  <pattern id="tenthGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+                    <path d="M 10 0 L 0 0 0 10" fill="none" stroke="silver" stroke-width="0.5" />
+                  </pattern>
+                  <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+                    <rect width="100" height="100" fill="url(#tenthGrid)" />
+                    <path d="M 100 0 L 0 0 0 100" fill="none" stroke="gray" stroke-width="1" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
                 <rect
+                  :for={{x, y} <- @grid}
                   x={x * 10}
                   y={y * 10}
                   width="10"
@@ -294,9 +214,8 @@ defmodule GameOfLiveWeb.GameLive do
                   fill="currentColor"
                   class="text-primary-600 dark:text-primary-500"
                 />
-              <% end %>
-              <%= for {x, y} <- @working_grid do %>
                 <rect
+                  :for={{x, y} <- @working_grid}
                   x={x * 10}
                   y={y * 10}
                   width="10"
@@ -304,138 +223,199 @@ defmodule GameOfLiveWeb.GameLive do
                   fill="currentColor"
                   class="text-green-600 dark:text-green-500"
                 />
-              <% end %>
-            </svg>
-          </section>
-        </main>
-        <div class="hidden">
-          <!-- Secondary column (hidden on smaller screens) -->
-          <aside
-            id="player-bar"
-            class="hidden w-80 bg-white dark:bg-zinc-900 border-l border-zinc-200 dark:border-zinc-700 overflow-y-auto xl:block dark:text-zinc-100"
-          >
-            Cool
-          </aside>
-          <.slideover id="players" class="xl:hidden">
-            Cool
-          </.slideover>
-        </div>
-      </div>
-      <.modal id="settings" no_border>
-        <.card>
-          <:title>Settings</:title>
-          <h3 class="text-md mb-2">Load or Dump the Game Grid</h3>
-          <form phx-submit="load" class="my-4">
-            <div class="flex items-end">
-              <.textarea id="dump-area" name="json" rows="5"><%= @show_grid %></.textarea>
-              <.button
-                id="copy-dump-btn"
-                class="ml-2 transition ease-out-300 flex-0"
-                phx-click={
-                  JS.dispatch("phx:copy", to: "#dump-area", detail: %{"el" => "#copy-dump-btn"})
-                }
-                data-copy-success={success_btn("#copy-dump-btn")}
-                data-copy-error={error_btn("#copy-dump-btn")}
-              >
-                Copy
-              </.button>
-            </div>
-            <div class="mt-4">
-              <.button type="submit" phx-click={hide_modal("settings")}>Load grid</.button>
-              <.button
-                id="dump-btn"
-                type="button"
-                phx-click="dump"
-              >
-                Dump grid
-              </.button>
-            </div>
-          </form>
-          <hr class="my-4" />
-          <h3 class="text-md mb-2">Tick Speed</h3>
-          <form phx-change="save_tick">
-            <!--<input type="text" inputmode="numeric" pattern="[0-9]*" name="tick" value={@tick}>-->
-            <input type="range" min="10" max="1000" value={@tick} name="tick" />
-            <span><%= @tick %></span>
-          </form>
-        </.card>
-      </.modal>
-      <.modal id="share" no_border>
-        <.card>
-          <:title>Share this board</:title>
-          <p class="mb-4">
-            Use the following button to create a permanent link to the current board state:
-          </p>
-
-          <.button
-            id="share-url-btn"
-            class="mb-4"
-            phx-click="share_link"
-          >
-            Generate Link
-          </.button>
-
-          <%= if @share_url do %>
-            <div class="flex items-end mb-4">
-              <.textarea id="share-url" rows="5"><%= @share_url %></.textarea>
-              <.button
-                id="copy-share-url-btn"
-                class="ml-2 transition ease-out-300"
-                phx-click={
-                  JS.dispatch("phx:copy", to: "#share-url", detail: %{"el" => "#copy-share-url-btn"})
-                }
-                data-copy-success={success_btn("#copy-share-url-btn")}
-                data-copy-error={error_btn("#copy-share-url-btn")}
-              >
-                Copy
-              </.button>
-            </div>
-          <% end %>
-
-          <hr />
-
-          <p class="my-4">
-            If you want others to join the current game session, just send them the current URL.
-          </p>
-
-          <div class="flex items-end">
-            <.textarea id="current-url" rows="2"><%= Routes.game_url(@socket, :game, @name) %></.textarea>
-            <.button
-              id="copy-current-url-btn"
-              class="ml-2 transition ease-out-300"
-              phx-click={
-                JS.dispatch("phx:copy", to: "#current-url", detail: %{"el" => "#copy-current-url-btn"})
-              }
-              data-copy-success={success_btn("#copy-current-url-btn")}
-              data-copy-error={error_btn("#copy-current-url-btn")}
-            >
-              Copy
-            </.button>
+              </svg>
+            </section>
           </div>
-        </.card>
-      </.modal>
-      <.modal id="info" no_border>
-        <.card>
-          <:title>Information</:title>
-          <p class="mb-4">
-            This game implements
-            <a class="underline" href="https://en.wikipedia.org/wiki/Conway's_Game_of_Life">Conway's Game of Life</a>
-            using <a class="underline" href="https://www.phoenixframework.org/">Phoenix LiveView</a>.
-          </p>
+        </div>
+        <.modal id="settings" no_border>
+          <.card>
+            <:title>Settings</:title>
+            <h3 class="text-md mb-2">Load or Dump the Game Grid</h3>
+            <form phx-submit="load" class="my-4">
+              <div class="flex items-end">
+                <.textarea id="dump-area" name="json" rows="5">{@show_grid}</.textarea>
+                <.copy_button id="copy-dump-btn" target="#dump-area" />
+              </div>
+              <div class="mt-4">
+                <.button type="submit" phx-click={hide_modal("settings")}>Load grid</.button>
+                <.button id="dump-btn" type="button" phx-click="dump">Dump grid</.button>
+              </div>
+            </form>
+            <hr class="my-4 border-zinc-300 dark:border-zinc-700" />
+            <h3 class="text-md mb-2">Tick Speed</h3>
+            <form phx-change="save_tick">
+              <input type="range" min="10" max="1000" value={@tick} name="tick" />
+              <span>{@tick}</span>
+            </form>
+          </.card>
+        </.modal>
+        <.modal id="share" no_border>
+          <.card>
+            <:title>Share this board</:title>
+            <p class="mb-4">
+              Use the following button to create a permanent link to the current board state:
+            </p>
 
-          <p class="mb-4">The game is played on a grid of cells. In each game step:</p>
+            <.button id="share-url-btn" class="mb-4" phx-click="share_link">
+              Generate Link
+            </.button>
 
-          <ol class="list-decimal list-inside">
-            <li>Any live cell with fewer than two live neighbours dies, as if by underpopulation.</li>
-            <li>Any live cell with two or three live neighbours lives on to the next generation.</li>
-            <li>Any live cell with more than three live neighbours dies, as if by overpopulation.</li>
-            <li>
-              Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
-            </li>
-          </ol>
-        </.card>
-      </.modal>
-    </div>
+            <div :if={@share_url} class="flex items-end mb-4">
+              <.textarea id="share-url" rows="5">{@share_url}</.textarea>
+              <.copy_button id="copy-share-url-btn" target="#share-url" />
+            </div>
+
+            <hr class="border-zinc-300 dark:border-zinc-700" />
+
+            <p class="my-4">
+              If you want others to join the current game session, just send them the current URL.
+            </p>
+
+            <div class="flex items-end">
+              <.textarea id="current-url" rows="2">{url(~p"/game/#{@name}")}</.textarea>
+              <.copy_button id="copy-current-url-btn" target="#current-url" />
+            </div>
+          </.card>
+        </.modal>
+        <.modal id="info" no_border>
+          <.card>
+            <:title>Information</:title>
+            <p class="mb-4">
+              This game implements
+              <a class="underline" href="https://en.wikipedia.org/wiki/Conway's_Game_of_Life">
+                Conway's Game of Life
+              </a>
+              using <a class="underline" href="https://www.phoenixframework.org/">Phoenix LiveView</a>.
+            </p>
+
+            <p class="mb-4">The game is played on a grid of cells. In each game step:</p>
+
+            <ol class="list-decimal list-inside">
+              <li>
+                Any live cell with fewer than two live neighbours dies, as if by underpopulation.
+              </li>
+              <li>
+                Any live cell with two or three live neighbours lives on to the next generation.
+              </li>
+              <li>Any live cell with more than three live neighbours dies, as if by overpopulation.</li>
+              <li>
+                Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
+              </li>
+            </ol>
+          </.card>
+        </.modal>
+      </div>
+
+      <script :type={Phoenix.LiveView.ColocatedHook} name=".Draw">
+        export default {
+          calcOffset(e) {
+            // as the svg is scaled to 100% width and height,
+            // we need to scale the coordinates
+            const r = this.el.getBoundingClientRect();
+            return {
+              offset_x: parseInt(e.offsetX * (1000 / r.width)),
+              offset_y: parseInt(e.offsetY * (1000 / r.height))
+            };
+          },
+          drawstart(_e) {
+            this.draw = true;
+            this.move = false;
+          },
+          drawmove(e) {
+            if (!this.draw) return;
+            if (!this.move) {
+              this.move = true;
+            } else {
+              this.pushEvent("draw", this.calcOffset(e));
+            }
+          },
+          drawend(e) {
+            this.draw = false;
+            if (this.move) {
+              this.pushEvent("draw", this.calcOffset(e));
+            } else {
+              // there was no move -> click event toggles
+              this.pushEvent("click", this.calcOffset(e));
+            }
+            this.move = false;
+          },
+          touchwrap(fun) {
+            // this function calculates the offsetX and offsetY
+            // events that are missing from touch events
+            // and allows us to treat them the same as mouse moves
+            return (e) => {
+              if (!e.touches[0]) return;
+              // do not draw on zoom
+              if (e.scale !== 1) return;
+              // https://stackoverflow.com/a/59411792
+              const r = this.el.getBoundingClientRect();
+              e.offsetX = parseInt(e.touches[0].clientX - r.left);
+              e.offsetY = parseInt(e.touches[0].clientY - r.top);
+              return fun(e);
+            };
+          },
+          mounted() {
+            // mouse events
+            this.el.addEventListener("mousedown", this.drawstart.bind(this));
+            this.el.addEventListener("mousemove", this.drawmove.bind(this));
+            this.el.addEventListener("mouseup", this.drawend.bind(this));
+            // touch events
+            this.el.addEventListener("touchstart", this.touchwrap(this.drawstart.bind(this)), {passive: true});
+            this.el.addEventListener("touchmove", this.touchwrap(this.drawmove.bind(this)), {passive: true});
+            this.el.addEventListener("touchend", this.touchwrap(this.drawend.bind(this)));
+          }
+        }
+      </script>
+
+      <:bottom_bar>
+        <.icon_button
+          title={if @run, do: "Pause Game", else: "Start Game"}
+          icon={if @run, do: "hero-pause-mini", else: "hero-play-mini"}
+          phx-click="toggle"
+        />
+        <.icon_button
+          title="Clear Grid"
+          icon="hero-x-mark-mini"
+          phx-click="clear"
+          disabled={MapSet.size(@working_grid) == 0 && MapSet.size(@grid) == 0}
+        />
+        <.icon_button
+          title="Apply Changes"
+          icon="hero-check-mini"
+          phx-click="apply_work"
+          disabled={MapSet.size(@working_grid) == 0}
+        />
+        <.icon_button
+          title={"Change mode to: #{if @mode == :draw, do: "Erase", else: "Draw"}"}
+          icon={if @mode == :draw, do: "hero-trash-mini", else: "hero-pencil-mini"}
+          phx-click="toggle_mode"
+        />
+        <.icon_button title="Share" icon="hero-share-mini" phx-click={show_modal("share")} />
+        <.icon_button
+          title="Game Settings"
+          icon="hero-cog-6-tooth-mini"
+          phx-click={show_modal("settings")}
+        />
+        <.icon_button title="Information" icon="hero-information-circle-mini" phx-click={show_modal("info")} />
+      </:bottom_bar>
+    </Layouts.app>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :target, :string, required: true, doc: "selector of the element whose text is copied"
+
+  defp copy_button(assigns) do
+    ~H"""
+    <.button
+      id={@id}
+      class="ml-2 transition ease-out-300 flex-0"
+      phx-click={JS.dispatch("phx:copy", to: @target, detail: %{"el" => "##{@id}"})}
+      data-copy-success={success_btn("##{@id}")}
+      data-copy-error={error_btn("##{@id}")}
+    >
+      Copy
+    </.button>
     """
   end
 end

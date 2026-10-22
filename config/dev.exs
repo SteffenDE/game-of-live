@@ -16,8 +16,8 @@ config :game_of_live, GameOfLiveWeb.Endpoint,
   secret_key_base: "/hddVf6p3LhB998CtgPKiilFy5gS+Fwv5JhYIqOLTWHK1xCV5o2974VnXFs+kAAd",
   watchers: [
     # Start the esbuild watcher by calling Esbuild.install_and_run(:default, args)
-    esbuild: {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
-    esbuild: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
+    esbuild: {Esbuild, :install_and_run, [:game_of_live, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:game_of_live, ~w(--watch)]}
   ]
 
 # ## SSL Support
@@ -47,15 +47,16 @@ config :game_of_live, GameOfLiveWeb.Endpoint,
 # Watch static and templates for browser reloading.
 config :game_of_live, GameOfLiveWeb.Endpoint,
   live_reload: [
+    web_console_logger: true,
     patterns: [
-      ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
-      ~r"lib/game_of_live_web/(live|views)/.*(ex)$",
-      ~r"lib/game_of_live_web/templates/.*(eex)$"
+      ~r"priv/static/(?!uploads/).*\.(js|css|png|jpeg|jpg|gif|svg)$"E,
+      ~r"lib/game_of_live_web/router\.ex$"E,
+      ~r"lib/game_of_live_web/(controllers|live|components)/.*\.(ex|heex)$"E
     ]
   ]
 
 # Do not include metadata nor timestamps in development logs
-config :logger, :console, format: "[$level] $message\n"
+config :logger, :default_formatter, format: "[$level] $message\n"
 
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
@@ -63,3 +64,14 @@ config :phoenix, :stacktrace_depth, 20
 
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
+
+config :phoenix_live_view,
+  # Include debug annotations and locations in rendered markup.
+  # Changing this configuration will require mix clean and a full recompile.
+  debug_heex_annotations: true,
+  debug_attributes: true,
+  # Enable helpful, but potentially expensive runtime checks
+  enable_expensive_runtime_checks: true
+
+# Enable dev routes for the dashboard
+config :game_of_live, dev_routes: true

@@ -12,15 +12,12 @@ defmodule GameOfLiveWeb.ShareController do
           MapSet.new(Enum.map(points, fn [x, y] -> {x, y} end))
         )
 
-        conn
-        |> redirect(to: Routes.game_path(conn, :game, name))
+        redirect(conn, to: ~p"/game/#{name}")
 
       {:error, _} ->
-        IO.puts("error!!!")
-
         conn
         |> put_flash(:error, "Invalid board")
-        |> redirect(to: Routes.game_path(conn, :game, name))
+        |> redirect(to: ~p"/game/#{name}")
     end
   end
 end

@@ -23,7 +23,7 @@ if config_env() == :prod do
 
   config :game_of_live, GameOfLiveWeb.Endpoint,
     server: true,
-    http: [:inet6, port: String.to_integer(System.get_env("PORT") || "4000")],
+    http: [ip: {0, 0, 0, 0, 0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT") || "4000")],
     url: [
       scheme: System.get_env("PUBLIC_SCHEME") || "http",
       host:
